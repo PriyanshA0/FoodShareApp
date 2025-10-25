@@ -2,13 +2,13 @@
 const express = require('express');
 const router = express.Router();
 
-// FIX: Import the entire module instead of using destructuring {}
+// FIX: Import the entire module 
 const statsController = require('../controllers/statsController'); 
 
 const { protect } = require('../middleware/authMiddleware'); 
 
 // Access the function using dot notation: statsController.getDashboardStats
-// THIS IS THE CRITICAL LINE (likely line 12 in your setup)
+// THIS MUST BE THE CODE ON LINE 12 WHERE THE ERROR OCCURS
 router.get('/dashboard', protect, statsController.getDashboardStats); 
 
 module.exports = router;
