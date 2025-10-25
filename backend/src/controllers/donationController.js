@@ -1,6 +1,6 @@
 const db = require('../config/db');
 const fs = require('fs');
-const cloudinary = require('../config/cloudinary'); // NEW: Import Cloudinary
+const cloudinary = require('../config/cloudinary'); 
 
 exports.postDonation = async (req, res) => {
     const { id: userId, role } = req.user; 
@@ -14,32 +14,29 @@ exports.postDonation = async (req, res) => {
 
     // Check for required fields
     if (!title || !quantity || !expiry_time || !pickup_location) {
-        // If there's a file, ensure it is deleted before returning 400
         if (imageFile && fs.existsSync(imageFile.path)) fs.unlinkSync(imageFile.path); 
         return res.status(400).json({ message: 'Missing required fields.' });
     }
 
     let imageUrl = null;
-    let publicId = null; // To store Cloudinary Public ID for potential rollback/deletion
+    let publicId = null; 
 
     // --- CRITICAL: CLOUDINARY UPLOAD LOGIC ---
     if (imageFile) {
         try {
-            // Upload file to Cloudinary
             const result = await cloudinary.uploader.upload(imageFile.path, {
-                folder: 'foodshare_donations', // Organizes files
+                folder: 'foodshare_donations',
             });
             
-            imageUrl = result.secure_url; // Permanent, public URL for the database
-            publicId = result.public_id; // Public ID is needed to delete/manage the file later
+            imageUrl = result.secure_url; 
+            publicId = result.public_id;
 
-            // Clean up the temporary file created by Multer from the server
+            // Clean up the temporary file
             if (fs.existsSync(imageFile.path)) {
                 fs.unlinkSync(imageFile.path); 
             }
             
         } catch (error) {
-            // If upload fails, ensure temp file is cleaned up and return error
             if (fs.existsSync(imageFile.path)) {
                 fs.unlinkSync(imageFile.path);
             }
@@ -53,7 +50,6 @@ exports.postDonation = async (req, res) => {
         const [restaurants] = await db.promise().query('SELECT id FROM restaurants WHERE user_id = ?', [userId]);
         const restaurantId = restaurants[0]?.id;
 
-        // NEW: Inserting the Cloudinary Public ID into the table (assuming you add a column for it)
         const sql = `
             INSERT INTO food_donations (restaurant_id, title, category, quantity, expiry_time, pickup_location, image_url, cloudinary_public_id, status) 
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, "pending")
@@ -63,8 +59,6 @@ exports.postDonation = async (req, res) => {
         res.status(201).json({ message: 'Donation posted successfully.' });
 
     } catch (error) {
-        // If DB insert fails, consider deleting the image from Cloudinary to prevent orphans
-        // if (publicId) await cloudinary.uploader.destroy(publicId); 
         res.status(500).json({ message: 'Failed to post donation.', error: error.message });
     }
 };
@@ -163,10 +157,6 @@ exports.completePickup = async (req, res) => {
             return res.status(409).json({ message: 'Pickup status could not be confirmed.' });
         }
         
-        // --- NOTE: ANALYTICS UPDATE HERE ---
-        // Placeholder for adding data to the analytics table/logic
-        // --- END ANALYTICS NOTE ---
-
         res.status(200).json({ message: 'Pickup confirmed successfully!' });
     } catch (error) {
         res.status(500).json({ message: 'Failed to complete pickup.', error: error.message });
