@@ -1,5 +1,5 @@
 // /backend/src/config/db.js
-const { Pool } = require('pg');
+const { Pool } = require('pg'); // Correct driver
 
 // CRITICAL: The pg driver MUST read the separate environment variables
 const pool = new Pool({

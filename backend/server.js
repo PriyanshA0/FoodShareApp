@@ -7,10 +7,9 @@ const db = require('./src/config/db');
 const authRoutes = require('./src/routes/authRoutes');
 const donationRoutes = require('./src/routes/donationRoutes');
 const userRoutes = require('./src/routes/userRoutes');
-const statsRoutes = require('./src/routes/statsRoutes'); // Import the statistics routes
+const statsRoutes = require('./src/routes/statsRoutes');
 
 const app = express();
-// Use PORT provided by Render (or 3000 locally)
 const PORT = process.env.PORT || 3000; 
 
 // Middleware Setup
@@ -22,23 +21,23 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use('/api/auth', authRoutes);
 app.use('/api/donations', donationRoutes);
 app.use('/api/users', userRoutes);
-app.use('/api/stats', statsRoutes); // Register the statistics route
+app.use('/api/stats', statsRoutes);
 
-// Test DB Connection and Start Server (CRITICAL: Database check before startup)
-db.getConnection((err, connection) => {
-    if (err) {
-        // If the database connection fails, log and EXIT the process
+// Test DB Connection and Start Server (FINAL CRITICAL FIX)
+// CHANGE: Use db.connect() (which returns a promise) instead of the invalid db.getConnection(callback)
+db.connect()
+    .then(client => {
+        // Successful connection
+        console.log('Connected to database successfully!');
+        client.release(); // Release the test connection immediately
+
+        // Only start the server AFTER a successful database connection
+        app.listen(PORT, () => {
+            console.log(`Server running on port ${PORT}`);
+        });
+    })
+    .catch(err => {
+        // Connection failed (ETIMEDOUT or other error)
         console.error('Database connection failed:', err.stack);
-        process.exit(1); // Exit with status 1 to force Render deployment failure
-        return;
-    }
-    console.log('Connected to database as ID:', connection.threadId);
-    connection.release();
-
-    // Only start the server AFTER a successful database connection
-    app.listen(PORT, () => {
-        console.log(`Server running on port ${PORT}`);
+        process.exit(1); // Exit with status 1 to fail the Render deployment
     });
-});
-// Note: The previous static serving of 'uploads' has been omitted as it is obsolete 
-// with Cloudinary and unsafe for Render.
