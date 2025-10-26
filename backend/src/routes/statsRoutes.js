@@ -2,17 +2,14 @@
 const express = require('express');
 const router = express.Router();
 
+// 1. Controller import (Fixed in previous steps to avoid crash)
 const statsController = require('../controllers/statsController'); 
 
-// CRITICAL FIX: Change the middleware import syntax to be more robust
-// We assume authMiddleware.js looks like: module.exports = { protect: async (...) => {...} }
-// or the protect function is exported as module.exports.protect.
-
-const authMiddleware = require('../middleware/authMiddleware'); // Import the whole module
-const protect = authMiddleware.protect; // Access the function via dot notation
+// 2. CRITICAL FIX: Import the default middleware function and assign it to 'protect'.
+const protect = require('../middleware/authMiddleware'); 
 
 // Access the controller function using dot notation: statsController.getDashboardStats
+// The crash line now correctly receives the 'protect' function.
 router.get('/dashboard', protect, statsController.getDashboardStats); 
-// Note: This must be line 12 in your file structure.
 
 module.exports = router;
