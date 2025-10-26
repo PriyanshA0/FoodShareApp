@@ -2,13 +2,17 @@
 const express = require('express');
 const router = express.Router();
 
-// FIX: Import the entire module 
 const statsController = require('../controllers/statsController'); 
 
-const { protect } = require('../middleware/authMiddleware'); 
+// CRITICAL FIX: Change the middleware import syntax to be more robust
+// We assume authMiddleware.js looks like: module.exports = { protect: async (...) => {...} }
+// or the protect function is exported as module.exports.protect.
 
-// Access the function using dot notation: statsController.getDashboardStats
-// THIS MUST BE THE CODE ON LINE 12 WHERE THE ERROR OCCURS
+const authMiddleware = require('../middleware/authMiddleware'); // Import the whole module
+const protect = authMiddleware.protect; // Access the function via dot notation
+
+// Access the controller function using dot notation: statsController.getDashboardStats
 router.get('/dashboard', protect, statsController.getDashboardStats); 
+// Note: This must be line 12 in your file structure.
 
 module.exports = router;
