@@ -1,21 +1,21 @@
 // /backend/src/config/db.js
-const mysql = require('mysql2/promise'); 
+// CRITICAL: Must use the 'pg' driver for PostgreSQL
+const { Pool } = require('pg'); 
 
-const pool = mysql.createPool({
+const pool = new Pool({
     host: process.env.DB_HOST, 
     user: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
     database: process.env.DB_NAME,
-    port: process.env.DB_PORT || 3306, // CRITICAL: Use 3306 for MySQL
-    waitForConnections: true,
-    connectionLimit: 10,
-    queueLimit: 0
+    port: process.env.DB_PORT, // 5432 for Postgres
 });
 
+// CRITICAL: Export the Pool for controllers to use, and a connect test for server.js
 module.exports = {
+    // This connects to test the connection and then releases it
     connect: async () => {
-        const connection = await pool.getConnection();
-        connection.release();
+        const client = await pool.connect();
+        client.release(); 
     },
-    pool: pool
+    pool: pool // The main pool used by controllers (e.g., db.pool.query(...))
 };
