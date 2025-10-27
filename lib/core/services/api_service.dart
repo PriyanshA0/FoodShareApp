@@ -5,8 +5,8 @@ import 'package:fwm_sys/models/donation_model.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
-  // IMPORTANT: Use your computer's IP and Node.js port (3000) for local testing.
-  static const String _baseUrl = "http://10.0.2.2:3000/api";
+  // FINAL PRODUCTION BASE URL (Updated from http://10.0.2.2:3000/api)
+  static const String _baseUrl = "https://foodshareapp-6ham.onrender.com/api";
 
   // --- PRIVATE METHOD TO RETRIEVE JWT TOKEN AND BUILD HEADERS ---
   Future<Map<String, String>> _getAuthHeaders() async {
@@ -14,6 +14,7 @@ class ApiService {
     final token = prefs.getString('auth_token');
 
     if (token == null) {
+      // Throw an exception to force re-login if the token is missing
       throw Exception('Authentication token not found. Please log in.');
     }
 
@@ -22,8 +23,6 @@ class ApiService {
       'Authorization': 'Bearer $token', // Standard JWT header
     };
   }
-
-  // --- PRIVATE METHOD TO RETRIEVE USER ID (for specific checks) ---
 
   // ----------------------------------------------------
   // AUTHENTICATION & REGISTRATION
@@ -120,6 +119,7 @@ class ApiService {
       ..headers.addAll({'Authorization': headers['Authorization']!});
 
     if (image != null) {
+      // The name 'image' must match the key used by Multer on the backend
       request.files.add(await http.MultipartFile.fromPath('image', image.path));
     }
 
@@ -146,7 +146,6 @@ class ApiService {
   Future<List<Donation>> getMyDonations() async {
     final headers = await _getAuthHeaders();
 
-    // Node.js endpoint will use the JWT token to find the user ID internally
     final response = await http.get(
       Uri.parse('$_baseUrl/donations/get_by_restaurant'),
       headers: headers,
@@ -208,6 +207,27 @@ class ApiService {
       return data.map((json) => Donation.fromJson(json)).toList();
     } else {
       throw Exception('Failed to load accepted orders: ${response.statusCode}');
+    }
+  }
+
+  // ----------------------------------------------------
+  // DASHBOARD ANALYTICS (Phase 2 Feature)
+  // ----------------------------------------------------
+
+  Future<Map<String, dynamic>> fetchDashboardStats() async {
+    final headers = await _getAuthHeaders();
+
+    final response = await http.get(
+      // Calls the new route implemented in statsController.js
+      Uri.parse('$_baseUrl/stats/dashboard'),
+      headers: headers,
+    );
+
+    if (response.statusCode == 200) {
+      return json.decode(response.body);
+    } else {
+      // Handle 401/403 errors separately if needed
+      throw Exception('Failed to load dashboard stats: ${response.statusCode}');
     }
   }
 

@@ -3,6 +3,7 @@ const bodyParser = require('body-parser');
 const cors = require('cors');
 require('dotenv').config(); 
 
+// Ensure db requires the corrected db.js file
 const db = require('./src/config/db'); 
 const authRoutes = require('./src/routes/authRoutes');
 const donationRoutes = require('./src/routes/donationRoutes');
@@ -23,13 +24,11 @@ app.use('/api/donations', donationRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/stats', statsRoutes);
 
-// Test DB Connection and Start Server (FINAL CRITICAL FIX)
-// CHANGE: Use db.connect() (which returns a promise) instead of the invalid db.getConnection(callback)
+// Test DB Connection and Start Server (Using the async db.connect())
 db.connect()
-    .then(client => {
+    .then(() => {
         // Successful connection
         console.log('Connected to database successfully!');
-        client.release(); // Release the test connection immediately
 
         // Only start the server AFTER a successful database connection
         app.listen(PORT, () => {
@@ -37,7 +36,7 @@ db.connect()
         });
     })
     .catch(err => {
-        // Connection failed (ETIMEDOUT or other error)
+        // Connection failed
         console.error('Database connection failed:', err.stack);
-        process.exit(1); // Exit with status 1 to fail the Render deployment
+        process.exit(1); // Exit with status 1 to fail the Render deployment cleanly
     });
