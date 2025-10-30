@@ -1,3 +1,5 @@
+// ignore_for_file: unused_local_variable
+
 import 'package:flutter/material.dart';
 import 'package:fwm_sys/core/constants/colors.dart';
 import 'package:fwm_sys/core/constants/strings.dart';
@@ -48,22 +50,59 @@ class _SignupScreenState extends State<SignupScreen> {
         _isLoading = true;
       });
       try {
+        // --- FINAL DATA CLEANUP BEFORE API CALL ---
+        // Clean the optional fields: convert empty strings to null for database safety
+        final contact = _contactController.text.trim().isEmpty
+            ? null
+            : _contactController.text.trim();
+        final address = _addressController.text.trim().isEmpty
+            ? null
+            : _addressController.text.trim();
+
+        // 1. Restaurant Specific Fields (Check if user selected restaurant)
+        final license =
+            _selectedUserType == 'restaurant' &&
+                _licenseController.text.trim().isNotEmpty
+            ? _licenseController.text.trim()
+            : null;
+
+        // 2. NGO Specific Fields (Check if user selected ngo)
+        final registrationNo =
+            _selectedUserType == 'ngo' &&
+                _registrationNoController.text.trim().isNotEmpty
+            ? _registrationNoController.text.trim()
+            : null;
+
+        // Safely parse or default volunteer count to null
+        int? volunteersCount;
+        if (_selectedUserType == 'ngo' &&
+            _volunteersController.text.trim().isNotEmpty) {
+          try {
+            volunteersCount = int.parse(_volunteersController.text.trim());
+          } catch (e) {
+            // Display specific parsing error and stop execution
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Error: Volunteer count must be a number.'),
+              ),
+            );
+            setState(() => _isLoading = false);
+            return;
+          }
+        }
+        // --- END DATA CLEANUP ---
+
         final response = await _apiService.registerUser(
           email: _emailController.text,
           password: _passwordController.text,
           role: _selectedUserType,
           name: _nameController.text,
-          contact: _contactController.text,
-          address: _addressController.text,
-          license: _selectedUserType == 'restaurant'
-              ? _licenseController.text
-              : null,
-          registrationNo: _selectedUserType == 'ngo'
-              ? _registrationNoController.text
-              : null,
-          volunteersCount: _selectedUserType == 'ngo'
-              ? int.parse(_volunteersController.text)
-              : null,
+
+          contact: contact, // Cleaned
+          address: address, // Cleaned
+          license: license, // Cleaned
+          registrationNo: registrationNo, // Cleaned
+          volunteersCount: volunteersCount, // Cleaned & Parsed
         );
 
         if (response['message'] ==
@@ -76,13 +115,24 @@ class _SignupScreenState extends State<SignupScreen> {
             MaterialPageRoute(builder: (context) => const LoginScreen()),
           );
         } else {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text(response['message'])));
+          // Display the error message returned from the Node.js server
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                response['message'] ??
+                    'Registration failed due to server error.',
+              ),
+            ),
+          );
         }
       } catch (e) {
+        // Final fallback for network/timeout errors
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to connect to the server.')),
+          SnackBar(
+            content: Text(
+              'Critical Failure: Could not finalize registration. Please check network.',
+            ),
+          ),
         );
       } finally {
         setState(() {

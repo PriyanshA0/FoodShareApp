@@ -27,19 +27,21 @@ exports.getProfile = async (req, res) => {
                 p.${contactPersonColumn} AS contact_person
             FROM users u
             JOIN ${profileTable} p ON u.id = p.user_id
-            WHERE u.id = ?
+            WHERE u.id = $1  -- FIX: Changed ? to $1
         `;
         
-        const [result] = await db.promise().query(sql, [userId]);
+        // FIX: Use db.pool.query for PostgreSQL and retrieve results using result.rows
+        const result = await db.pool.query(sql, [userId]);
 
-        if (result.length === 0) {
+        if (result.rows.length === 0) {
             return res.status(404).json({ message: 'Profile data not found.' });
         }
 
         // Send flattened structure for Flutter consumption
-        res.status(200).json(result[0]);
+        res.status(200).json(result.rows[0]); // FIX: Use result.rows[0] for pg driver
 
     } catch (error) {
+        console.error("User Profile Error:", error);
         res.status(500).json({ message: 'Failed to fetch user data.', error: error.message });
     }
 };
@@ -61,11 +63,12 @@ exports.updateProfile = async (req, res) => {
         // Update profile table
         const sql = `
             UPDATE ${profileTable}
-            SET name = ?, contact_number = ?, address = ?
-            WHERE user_id = ?
+            SET name = $1, contact_number = $2, address = $3 -- FIX: Changed ? to $1, $2, $3
+            WHERE user_id = $4                           -- FIX: Changed ? to $4
         `;
         
-        await db.promise().query(sql, [name, contact_number, address, userId]);
+        // FIX: Use db.pool.query() for PostgreSQL
+        await db.pool.query(sql, [name, contact_number, address, userId]);
 
         res.status(200).json({ message: 'Profile updated successfully!' });
 
